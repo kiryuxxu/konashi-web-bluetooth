@@ -47,7 +47,14 @@
       pioOutput &= ~(0x01 << data.pin);
     }
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
-      k.triggerCallback(messageId);
+      k.triggerCallback(messageId, {});
+    });
+  }
+
+  function doDigitalWriteAll(messageId, data){
+    pioOutput = data.value;
+    characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
+      k.triggerCallback(messageId, {});
     });
   }
 
@@ -68,7 +75,7 @@
           }));
         }
         Promise.all(promises).then(()=>{
-          k.triggerCallback(messageId);
+          k.triggerCallback(messageId, {});
           k.triggerFromNative(k.KONASHI_EVENT_READY, {});
         });
       });
@@ -81,14 +88,12 @@
       pioSetting &= ~(0x01 << data.pin);
     }
     characteristic.PIO_SETTING.writeValue(new Uint8Array([pioSetting])).then(()=>{
-      k.triggerCallback(messageId);
+      k.triggerCallback(messageId, {});
     });
   }
 
   // Overwrite command diaptcher
   k.triggerToNative = function (){
-    console.log(this.messages[0]);
-
     var eventName = this.messages[0].eventName,
         messageId = this.messages[0].messageId,
         data = this.messages[0].data
@@ -98,6 +103,9 @@
       case "digitalWrite":
         doDigitalWrite(messageId, data);
         break;
+      case "digitalWriteAll":
+        doDigitalWriteAll(messageId, data);
+        break;
       case "find":
         doFind(messageId);
         break;
@@ -106,6 +114,7 @@
         break;
       default:
         console.log("not impl: " + eventName);
+        console.log(this.messages[0]);
         break;
     }
 
