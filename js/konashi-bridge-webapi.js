@@ -33,13 +33,23 @@
   // BluetoothGATTCharacteristic object map
   var characteristic = {};
 
-  var konashiDevice;
+  var konashiDevice = null;
+  var gattServer = null;
 
   // Digital PIO
   var pioSetting = 0;
   var pioPullup = 0;
   var pioInput = 0;
   var pioOutput = 0;
+
+  function isConnected(){
+    return !!(gattServer && gattServer.connected);
+  }
+
+  function log(message){
+    k.log(JSON.stringify({webapi: message}));
+    console.log(message);
+  }
 
   // Command implementation
   function doDigitalWrite(messageId, data){
@@ -60,14 +70,26 @@
     });
   }
 
-  function doFind(messageId){
-    var options = { filters: [{ namePrefix: 'konashi' }] };
-    navigator.bluetooth.requestDevice(options)
+  function doDisconnect(messageId, data){
+    characteristic = {};
+    // BluetoothGATTRemoteServer#disconnect isn't optional, but Chrome does not
+    // implement it yet.
+    if (gattServer.disconnect)
+      gattServer.disconnect();
+    gattServer = null;
+    konashiDevice = null;
+    k.triggerCallback(messageId);
+  }
+
+  function doFind(messageId, filter){
+    navigator.bluetooth.requestDevice({ filters: [filter] })
       .then(device=>{
         konashiDevice = device;
         return device.connectGATT();
-      }).then(server=>server.getPrimaryService(UUID_SERVICE.KONASHI))
-      .then(service=>{
+      }).then(server=>{
+        gattServer = server;
+        return server.getPrimaryService(UUID_SERVICE.KONASHI);
+      }).then(service=>{
         k.triggerFromNative(k.KONASHI_EVENT_CONNECTED);
         var promises = [];
         for (var name in UUID_CHARACTERISTIC) {
@@ -86,6 +108,10 @@
       }).catch(e=>{
         k.triggerCallback(messageId);
       });
+  }
+
+  function doIsConnected(messageId){
+    k.triggerCallback(messageId, {isConnected: isConnected()});
   }
 
   function doPinMode(messageId, data){
@@ -115,28 +141,36 @@
         data = this.messages[0].data
     ;
 
+    this.messages.shift();
+
     switch (eventName) {
-      case "digitalWrite":
-        doDigitalWrite(messageId, data);
-        break;
-      case "digitalWriteAll":
-        doDigitalWriteAll(messageId, data);
-        break;
       case "find":
-        doFind(messageId);
-        break;
-      case "pinMode":
-        doPinMode(messageId, data);
-        break;
-      case "signalStrengthReadRequest":
-        doSignalStrengthReadRequest(messageId);
-        break;
-      default:
-        console.log("not impl: " + eventName);
-        console.log(this.messages[0]);
-        break;
+        return doFind(messageId, { namePrefix: 'konashi' });
+      case "findWithName":
+        return doFind(messageId, { name: data.name });
+      case "isConnected":
+        return doIsConnected(messageId);
     }
 
-    this.messages.shift();
+    if (!isConnected()) {
+      k.triggerCallback(messageId);
+      return;
+    }
+
+    switch (eventName) {
+      case "digitalWrite":
+        return doDigitalWrite(messageId, data);
+      case "digitalWriteAll":
+        return doDigitalWriteAll(messageId, data);
+      case "disconnect":
+        return doDisconnect(messageId);
+      case "pinMode":
+        return doPinMode(messageId, data);
+      case "signalStrengthReadRequest":
+        return doSignalStrengthReadRequest(messageId);
+      default:
+        log("not impl: " + eventName);
+        log(this.messages[0]);
+    }
   };
 })();
