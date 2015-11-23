@@ -111,7 +111,14 @@
   }
 
   function doIsConnected(messageId){
-    k.triggerCallback(messageId, {isConnected: isConnected()});
+    k.triggerCallback(messageId, { isConnected: isConnected() });
+  }
+
+  function doPeripheralName(messageId){
+    var name = "";
+    if (isConnected())
+      name = konashiDevice.name || konashiDevice.id;
+    k.triggerCallback(messageId, { peripheralName: name });
   }
 
   function doPinMode(messageId, data){
@@ -150,6 +157,8 @@
         return doFind(messageId, { name: data.name });
       case "isConnected":
         return doIsConnected(messageId);
+      case "peripheralName":
+        return doPeripheralName(messageId);
     }
 
     if (!isConnected()) {
