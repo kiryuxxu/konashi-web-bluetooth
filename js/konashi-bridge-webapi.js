@@ -31,8 +31,9 @@
   };
 
   // BluetoothGATTCharacteristic object map
-  // Make this object global as a workaround for crbug.com/557571.
-  characteristic = {};
+  var characteristic = {};
+
+  var konashiDevice;
 
   // Digital PIO
   var pioSetting = 0;
@@ -48,23 +49,26 @@
       pioOutput &= ~(0x01 << data.pin);
     }
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
-      k.triggerCallback(messageId, {});
+      k.triggerCallback(messageId);
     });
   }
 
   function doDigitalWriteAll(messageId, data){
     pioOutput = data.value;
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
-      k.triggerCallback(messageId, {});
+      k.triggerCallback(messageId);
     });
   }
 
   function doFind(messageId){
     var options = { filters: [{ namePrefix: 'konashi' }] };
     navigator.bluetooth.requestDevice(options)
-      .then(device=>device.connectGATT())
-      .then(server=>server.getPrimaryService(UUID_SERVICE.KONASHI))
+      .then(device=>{
+        konashiDevice = device;
+        return device.connectGATT();
+      }).then(server=>server.getPrimaryService(UUID_SERVICE.KONASHI))
       .then(service=>{
+        k.triggerFromNative(k.KONASHI_EVENT_CONNECTED);
         var promises = [];
         for (var name in UUID_CHARACTERISTIC) {
           promises.push(new Promise((resolve, reject)=>{
@@ -76,11 +80,11 @@
           }));
         }
         Promise.all(promises).then(()=>{
-          k.triggerCallback(messageId, {});
-          k.triggerFromNative(k.KONASHI_EVENT_READY, {});
+          k.triggerCallback(messageId);
+          k.triggerFromNative(k.KONASHI_EVENT_READY);
         });
       }).catch(e=>{
-        k.triggerCallback(messageId, {});
+        k.triggerCallback(messageId);
       });
   }
 
@@ -91,8 +95,17 @@
       pioSetting &= ~(0x01 << data.pin);
     }
     characteristic.PIO_SETTING.writeValue(new Uint8Array([pioSetting])).then(()=>{
-      k.triggerCallback(messageId, {});
+      k.triggerCallback(messageId);
     });
+  }
+
+  function doSignalStrengthReadRequest(messageId){
+    // RSSI is an optional for Web Bluetooth.
+    if (konashiDevice.adData && konashiDevice.adData.rssi) {
+      k.triggerFromNative(k.KONASHI_EVENT_UPDATE_SIGNAL_STRENGTH,
+                          konashiDevice.adData.rssi);
+    }
+    k.triggerCallback(messageId);
   }
 
   // Overwrite command diaptcher
@@ -114,6 +127,9 @@
         break;
       case "pinMode":
         doPinMode(messageId, data);
+        break;
+      case "signalStrengthReadRequest":
+        doSignalStrengthReadRequest(messageId);
         break;
       default:
         console.log("not impl: " + eventName);
