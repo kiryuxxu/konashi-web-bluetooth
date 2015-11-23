@@ -79,6 +79,7 @@
     gattServer = null;
     konashiDevice = null;
     k.triggerCallback(messageId);
+    k.triggerFromNative(k.KONASHI_EVENT_DISCONNECTED);
   }
 
   function doFind(messageId, filter){
@@ -102,11 +103,15 @@
           }));
         }
         Promise.all(promises).then(()=>{
+          // Notifications does not work on Android yet. Let's poll it.
+          // https://github.com/WebBluetoothCG/web-bluetooth/blob/gh-pages/implementation-status.md
+          // See crbug.com/529560 and crbug.com/537459.
           k.triggerCallback(messageId);
           k.triggerFromNative(k.KONASHI_EVENT_READY);
         });
       }).catch(e=>{
         k.triggerCallback(messageId);
+        k.triggerFromNative(k.KONASHI_EVENT_PERIPHERAL_NOT_FOUND);
       });
   }
 
@@ -134,6 +139,7 @@
 
   function doSignalStrengthReadRequest(messageId){
     // RSSI is an optional for Web Bluetooth.
+    // At least, Chrome does not expose it. See crbug.com/553395.
     if (konashiDevice.adData && konashiDevice.adData.rssi) {
       k.triggerFromNative(k.KONASHI_EVENT_UPDATE_SIGNAL_STRENGTH,
                           konashiDevice.adData.rssi);
