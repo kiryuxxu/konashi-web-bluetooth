@@ -62,9 +62,9 @@
   function doFind(messageId){
     var options = { filters: [{ namePrefix: 'konashi' }] };
     navigator.bluetooth.requestDevice(options)
-      .then(device => device.connectGATT())
-      .then(server => server.getPrimaryService(UUID_SERVICE.KONASHI))
-      .then(service => {
+      .then(device=>device.connectGATT())
+      .then(server=>server.getPrimaryService(UUID_SERVICE.KONASHI))
+      .then(service=>{
         var promises = [];
         for (var name in UUID_CHARACTERISTIC) {
           promises.push(new Promise((resolve, reject)=>{
@@ -79,6 +79,8 @@
           k.triggerCallback(messageId, {});
           k.triggerFromNative(k.KONASHI_EVENT_READY, {});
         });
+      }).catch(e=>{
+        k.triggerCallback(messageId, {});
       });
   }
 
