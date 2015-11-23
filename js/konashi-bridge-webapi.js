@@ -31,7 +31,8 @@
   };
 
   // BluetoothGATTCharacteristic object map
-  var characteristic = {};
+  // Make this object global as a workaround for crbug.com/557571.
+  characteristic = {};
 
   // Digital PIO
   var pioSetting = 0;
