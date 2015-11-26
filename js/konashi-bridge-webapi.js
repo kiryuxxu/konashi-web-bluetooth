@@ -65,6 +65,8 @@
     }
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
       triggerCallback(messageId);
+    }).catch(e=>{
+      triggerCallback(messageId, { error: e });
     });
   }
 
@@ -72,6 +74,8 @@
     pioOutput = data.value;
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
       triggerCallback(messageId);
+    }).catch(e=>{
+      triggerCallback(messageId, { error: e });
     });
   }
 
@@ -140,6 +144,8 @@
     }
     characteristic.PIO_SETTING.writeValue(new Uint8Array([pioSetting])).then(()=>{
       triggerCallback(messageId);
+    }).catch(e=>{
+      triggerCallback(messageId, { error: e });
     });
   }
 
