@@ -51,6 +51,11 @@
     console.log(message);
   }
 
+  function triggerCallback(messageId, data){
+    k.messages.shift();
+    k.triggerCallback(messageId, data);
+  }
+
   // Command implementation
   function doDigitalWrite(messageId, data){
     if (data.value == k.HIGH) {
@@ -59,14 +64,14 @@
       pioOutput &= ~(0x01 << data.pin);
     }
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
-      k.triggerCallback(messageId);
+      triggerCallback(messageId);
     });
   }
 
   function doDigitalWriteAll(messageId, data){
     pioOutput = data.value;
     characteristic.PIO_OUTPUT.writeValue(new Uint8Array([pioOutput])).then(()=>{
-      k.triggerCallback(messageId);
+      triggerCallback(messageId);
     });
   }
 
@@ -78,7 +83,7 @@
       gattServer.disconnect();
     gattServer = null;
     konashiDevice = null;
-    k.triggerCallback(messageId);
+    triggerCallback(messageId);
     k.triggerFromNative(k.KONASHI_EVENT_DISCONNECTED);
   }
 
@@ -107,24 +112,24 @@
           // Notifications does not work on Android yet. Let's poll it.
           // https://github.com/WebBluetoothCG/web-bluetooth/blob/gh-pages/implementation-status.md
           // See crbug.com/529560 and crbug.com/537459.
-          k.triggerCallback(messageId);
+          triggerCallback(messageId);
           k.triggerFromNative(k.KONASHI_EVENT_READY);
         });
       }).catch(e=>{
-        k.triggerCallback(messageId);
+        triggerCallback(messageId);
         k.triggerFromNative(k.KONASHI_EVENT_PERIPHERAL_NOT_FOUND);
       });
   }
 
   function doIsConnected(messageId){
-    k.triggerCallback(messageId, { isConnected: isConnected() });
+    triggerCallback(messageId, { isConnected: isConnected() });
   }
 
   function doPeripheralName(messageId){
     var name = "";
     if (isConnected())
       name = konashiDevice.name || konashiDevice.id;
-    k.triggerCallback(messageId, { peripheralName: name });
+    triggerCallback(messageId, { peripheralName: name });
   }
 
   function doPinMode(messageId, data){
@@ -134,7 +139,7 @@
       pioSetting &= ~(0x01 << data.pin);
     }
     characteristic.PIO_SETTING.writeValue(new Uint8Array([pioSetting])).then(()=>{
-      k.triggerCallback(messageId);
+      triggerCallback(messageId);
     });
   }
 
@@ -145,17 +150,16 @@
       k.triggerFromNative(k.KONASHI_EVENT_UPDATE_SIGNAL_STRENGTH,
                           konashiDevice.adData.rssi);
     }
-    k.triggerCallback(messageId);
+    triggerCallback(messageId);
   }
 
   // Overwrite command diaptcher
   k.triggerToNative = function (){
+    log(this.messages[0]);
     var eventName = this.messages[0].eventName,
         messageId = this.messages[0].messageId,
         data = this.messages[0].data
     ;
-
-    this.messages.shift();
 
     switch (eventName) {
       case "find":
@@ -169,7 +173,7 @@
     }
 
     if (!isConnected()) {
-      k.triggerCallback(messageId);
+      triggerCallback(messageId);
       return;
     }
 
@@ -187,6 +191,7 @@
       default:
         log("not impl: " + eventName);
         log(this.messages[0]);
+        triggerCallback(messageId);
     }
   };
 })();
