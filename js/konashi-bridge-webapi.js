@@ -83,7 +83,8 @@
   }
 
   function doFind(messageId, filter){
-    navigator.bluetooth.requestDevice({ filters: [filter] })
+    var serviceFilter = { services: [ UUID_SERVICE.KONASHI ] };
+    navigator.bluetooth.requestDevice({ filters: [filter, serviceFilter] })
       .then(device=>{
         konashiDevice = device;
         return device.connectGATT();
