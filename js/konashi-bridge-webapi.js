@@ -39,8 +39,9 @@
   // Digital PIO
   var pioSetting = 0;
   var pioPullup = 0;
-  var pioInput = 0;
   var pioOutput = 0;
+  var pioInput = 0;
+  var pioByte = 0;
 
   function isConnected(){
     return !!(gattServer && gattServer.connected);
@@ -113,11 +114,17 @@
           }));
         }
         Promise.all(promises).then(()=>{
-          // Notifications does not work on Android yet. Let's poll it.
-          // https://github.com/WebBluetoothCG/web-bluetooth/blob/gh-pages/implementation-status.md
+          var notifications = [];
+          notifications.push(characteristic.PIO_INPUT_NOTIFICATION.startNotifications());
+          characteristic.PIO_INPUT_NOTIFICATION.oncharacteristicvaluechanged = e=>{
+            didUpdateDigitalIO(new Uint8Array(e.target.value));
+          };
+          // Notifications does not work on Android yet.
           // See crbug.com/529560 and crbug.com/537459.
-          triggerCallback(messageId);
-          k.triggerFromNative(k.KONASHI_EVENT_READY);
+          Promise.all(notifications).then(()=>{
+            triggerCallback(messageId);
+            k.triggerFromNative(k.KONASHI_EVENT_READY);
+          });
         });
       }).catch(e=>{
         triggerCallback(messageId);
@@ -154,9 +161,19 @@
     // At least, Chrome does not expose it. See crbug.com/553395.
     if (konashiDevice.adData && konashiDevice.adData.rssi) {
       k.triggerFromNative(k.KONASHI_EVENT_UPDATE_SIGNAL_STRENGTH,
-                          konashiDevice.adData.rssi);
+                          { value: konashiDevice.adData.rssi });
     }
     triggerCallback(messageId);
+  }
+
+  function didUpdateDigitalIO(data){
+    var xor = (pioByte ^ data[0]) & ~pioSetting;
+    pioByte = data[0];
+    pioInput = data[0];
+    for (var i = 7; i >= 0; --i) {
+      if (xor & 1 << i)
+        k.triggerFromNative(k.KONASHI_EVENT_UPDATE_PIO_INPUT, { value: data[0] });
+    }
   }
 
   // Overwrite command diaptcher
