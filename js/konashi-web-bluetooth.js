@@ -86,9 +86,20 @@ var consts = {
 };
 
 class Konashi {
+  /**
+   * Returns konashi's service UUID
+   *
+   * @returns {String}
+   */
   static get _serviceUUID() {
     return '229bff00-03fb-40da-98a7-b0def65c2d4b';
   }
+
+  /**
+   * Returns konashi's UUID with label
+   *
+   * @returns {Object<String, String>} key: label, value: UUID
+   */
   static get _characteristicUUIDs() {
     return {
       analogInput:   '229b3008-03fb-40da-98a7-b0def65c2d4b',
@@ -119,8 +130,15 @@ class Konashi {
       hardwareLowBatteryNotification:
                      '229b3015-03fb-40da-98a7-b0def65c2d4b'
     };
-  }  
+  }
 
+  /**
+   * Find konasih2 device
+   *
+   * @param {Boolean} [autoConnect]
+   * @param {Object} [filter] defaul: `{namePrefix: 'konashi2'}`
+   * @returns {Promise<Konashi>}
+   */
   static find(autoConnect, filter) {
     if (typeof autoConnect == undefined) {
       autoConnect = true;
@@ -145,19 +163,42 @@ class Konashi {
     });
   }
 
+  /**
+   * constructor
+   *
+   * @param {BluetoothDevice}
+   */
   constructor(device) {
+    /** BluetoothDevice */
     this._device = device;
+    /** BluetoothGATTRemoteServer */
     this._gatt = null;
+    /** BluetoothGATTService */
     this._service = null;
+    /** Object<String, BluetoothGATTCharacteristic> */
     this._characteristic = {};
+
     var key;
+
+    this._characteristicStore = {};
+    for (key in this._characteristicUUIDs()) {
+        this._characteristicStore[key] = 0;
+    }
+
     for (key in consts) {
         this[key] = consts[key];
     }
   }
 
+  /**
+   * Connect to konashi
+   *
+   * Assign `_gatt` and `_service` properties when
+   * the connection has been made.
+   *
+   * @returns {Promise<Konashi>}
+   */
   connect() {
-    alert('connect');
     var that = this;
     return new Promise((resolve, reject) => {
       that._device.connectGATT()
@@ -179,6 +220,9 @@ class Konashi {
               promises.push(
                 that._service.getCharacteristic(Konashi._characteristicUUIDs[label]).then(
                   (c) => {
+                    // TODO: Watch changes of all characteristics
+                    //c.addEventListener('characteristicvaluechanged', onHeartRateChanged);
+                    //c.startNotifications();
                     that._characteristic[label] = c;
                     Promise.resolve();
                   }
@@ -196,8 +240,16 @@ class Konashi {
     });
   }  
 
-  isConnected() {}
+  isConnected() {
+  }
+
+  /**
+   * Returns peripheral name
+   *
+   * @returns {Promise<String>}
+   */
   peripheralName() {}
+
   delay(ms) => {
     return new Promise((resolve, reject) => {
       setTimeout(resolve, ms);
@@ -206,6 +258,13 @@ class Konashi {
 
   // { Digital I/O
 
+  /**
+   * Set konashi's pin mode
+   *
+   * @param {Number} Konashi.PIO[0-7]
+   * @param {Number} Konashi.(INPUT|OUTPUT)
+   * @returns {Promise<void}
+   */
   pinMode(pin, flag) {
     var data = 0;
     if (flag == consts.OUTPUT) {
@@ -216,11 +275,16 @@ class Konashi {
     return this._characteristic.pioSetting.writeValue(new Uint8Array([data]));
   }
 
-  pinModeAll(mode) {}
   pinPullup(pin, mode) {}
-  pinPullupAll(mode) {}
-  digitalRead(pin) {}
-  digitalReadAll() {}
+
+  /**
+   * Read a value of digital pin
+   *
+   * @param {Number} Konashi.PIO[0-7]
+   */
+  digitalRead(pin) {
+  }
+
   digitalWrite(pin, value) {
     var data = 0;
     if (value == consts.HIGH) {
@@ -230,7 +294,6 @@ class Konashi {
     }
     return this._characteristic.pioOutput.writeValue(new Uint8Array([data]));
   }
-  digitalWriteAl(value) {}
 
   // Digital I/O }
 
