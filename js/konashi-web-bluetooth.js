@@ -1,6 +1,6 @@
 (() => {
 
-let consts = {
+const consts = {
   HIGH: 1,
   LOW: 0,
   OUTPUT: 1,
@@ -173,8 +173,7 @@ class Konashi {
     /** Object<String, BluetoothGATTCharacteristic> */
     this._characteristic = {};
 
-    var key;
-    for (key in consts) {
+    for (let key in consts) {
         this[key] = consts[key];
     }
     // TODO
@@ -203,8 +202,8 @@ class Konashi {
         .then(
           (service) => {
             that._service = service;
-            var promises = [], keys = [], key;
-            for (key in Konashi._characteristicUUIDs) {
+            var promises = [], keys = [];
+            for (let key in Konashi._characteristicUUIDs) {
               keys.push(key);
             }
             keys.forEach((label, i) => {
@@ -298,7 +297,6 @@ class Konashi {
 // https://github.com/YUKAI/konashi-android-sdk/blob/master/konashi-android-sdk/src/main/java/com/uxxu/konashi/lib/dispatcher/PioStoreUpdater.java
 // https://github.com/YUKAI/konashi-android-sdk/blob/master/konashi-android-sdk/src/main/java/com/uxxu/konashi/lib/store/PioStore.java#L19 
   digitalWrite(pin, value) {
-    var output = this._pioOutputStore;
     if (value == consts.HIGH) {
       this._pioOutputStore |= 0x01 << pin;
     } else {
@@ -360,17 +358,6 @@ class Konashi {
   signalStrengthRead() {}
 
   // Hardware Control }
-
-  _onCharacteristicValueChanged(ev) {
-    var c = ev.target;
-    var label, uuid;
-    for (label in this._characteristicUUIDs) {
-      uuid = this._characteristicUUIDs[label];
-      if (c.uuid == uuid) {
-        this._characteristicStore[label] = c.value;
-      }
-    }
-  }
 }
 
 class IOState {
@@ -439,8 +426,7 @@ class IOState {
     }
 }
 
-var key, value;
-for (key in consts) {
+for (let key in consts) {
     Konashi[key] = consts[key];
 }
 
