@@ -1,9 +1,3 @@
-// See
-// https://webbluetoothcg.github.io/web-bluetooth/
-// https://github.com/toyoshim/konashi-js-sdk/tree/web_bluetooth
-// https://developer.chrome.com/apps/bluetoothLowEnergy
-// https://developer.chrome.com/devtools/docs/remote-debugging
-
 (() => {
 
 let consts = {
