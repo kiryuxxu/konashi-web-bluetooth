@@ -8,5 +8,5 @@ node_modules
 *.swp
 *.swo
 bower_components
-
-*.pem
+tmp
+*.pyc

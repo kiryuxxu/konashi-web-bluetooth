@@ -1,11 +1,12 @@
 // See
 // https://webbluetoothcg.github.io/web-bluetooth/
 // https://github.com/toyoshim/konashi-js-sdk/tree/web_bluetooth
+// https://developer.chrome.com/apps/bluetoothLowEnergy
 // https://developer.chrome.com/devtools/docs/remote-debugging
 
 (() => {
 
-var consts = {
+let consts = {
   HIGH: 1,
   LOW: 0,
   OUTPUT: 1,
@@ -179,15 +180,11 @@ class Konashi {
     this._characteristic = {};
 
     var key;
-
-    this._characteristicStore = {};
-    for (key in this._characteristicUUIDs()) {
-        this._characteristicStore[key] = 0;
-    }
-
     for (key in consts) {
         this[key] = consts[key];
     }
+    // TODO
+    this._pioOutputStore = 0;
   }
 
   /**
@@ -221,8 +218,7 @@ class Konashi {
                 that._service.getCharacteristic(Konashi._characteristicUUIDs[label]).then(
                   (c) => {
                     // TODO: Watch changes of all characteristics
-                    //c.addEventListener('characteristicvaluechanged', onHeartRateChanged);
-                    //c.startNotifications();
+                    // https://github.com/WebBluetoothCG/web-bluetooth/issues/176
                     that._characteristic[label] = c;
                     Promise.resolve();
                   }
@@ -250,7 +246,7 @@ class Konashi {
    */
   peripheralName() {}
 
-  delay(ms) => {
+  delay(ms) {
     return new Promise((resolve, reject) => {
       setTimeout(resolve, ms);
     });
@@ -258,21 +254,35 @@ class Konashi {
 
   // { Digital I/O
 
+  pinModes() {
+    return this._characteristic.pioSetting.readValue().then(
+      (v) => {
+        var bufview = new Uint8Array(v);
+      });
+  }
+
   /**
    * Set konashi's pin mode
    *
    * @param {Number} Konashi.PIO[0-7]
    * @param {Number} Konashi.(INPUT|OUTPUT)
-   * @returns {Promise<void}
+   * @returns {Promise<void>}
    */
   pinMode(pin, flag) {
-    var data = 0;
-    if (flag == consts.OUTPUT) {
-      data |= 0x01 << pin;
-    } else {
-      data &= ~(0x01 << pin);
-    }
-    return this._characteristic.pioSetting.writeValue(new Uint8Array([data]));
+    var that = this;
+    return new Promise((resolve, reject) => {
+      that._characteristic.pioSetting.readValue()
+        .then((v) => {
+          var data = (new Uint8Array(v))[0];
+          if (flag == consts.OUTPUT) {
+            data |= 0x01 << pin;
+          } else {
+            data &= ~(0x01 << pin);
+          }
+          this._characteristic.pioSetting.writeValue(new Uint8Array([data]))
+            .then(resolve, reject);
+        });
+    });
   }
 
   pinPullup(pin, mode) {}
@@ -281,18 +291,26 @@ class Konashi {
    * Read a value of digital pin
    *
    * @param {Number} Konashi.PIO[0-7]
+   * @returns {Promise<Number>} Konashi.(LOW|HIGH)
    */
   digitalRead(pin) {
+    return this._characteristic.pioInputNotification.readValue()
+      .then((buf) => {
+        var bufview = new Uint8Array(buf);
+        return bufview[0];
+      });
   }
 
+// https://github.com/YUKAI/konashi-android-sdk/blob/master/konashi-android-sdk/src/main/java/com/uxxu/konashi/lib/dispatcher/PioStoreUpdater.java
+// https://github.com/YUKAI/konashi-android-sdk/blob/master/konashi-android-sdk/src/main/java/com/uxxu/konashi/lib/store/PioStore.java#L19 
   digitalWrite(pin, value) {
-    var data = 0;
+    var output = this._pioOutputStore;
     if (value == consts.HIGH) {
-      data |= 0x01 << pin;
+      this._pioOutputStore |= 0x01 << pin;
     } else {
-      data &= ~(0x01 << pin);
+      this._pioOutputStore &= ~(0x01 << pin) & 0xFF;
     }
-    return this._characteristic.pioOutput.writeValue(new Uint8Array([data]));
+    return this._characteristic.pioOutput.writeValue(new Uint8Array([this._pioOutputStore]));
   }
 
   // Digital I/O }
@@ -348,6 +366,83 @@ class Konashi {
   signalStrengthRead() {}
 
   // Hardware Control }
+
+  _onCharacteristicValueChanged(ev) {
+    var c = ev.target;
+    var label, uuid;
+    for (label in this._characteristicUUIDs) {
+      uuid = this._characteristicUUIDs[label];
+      if (c.uuid == uuid) {
+        this._characteristicStore[label] = c.value;
+      }
+    }
+  }
+}
+
+class IOState {
+
+    static get pioModes() {
+    }
+
+    static get pioPullups() {
+    }
+
+    static get pioInputs() {
+    }
+
+    static get pioOutputs() {
+    }
+
+    static get pwmModes() {
+    }
+
+    static get pwmPeriods() {
+    }
+
+    static get pwmDuties() {
+    }
+
+    static get aio0() {
+    }
+
+    static get aio1() {
+    }
+
+    static get aio2() {
+    }
+
+    static get uartMode() {
+    }
+
+    static get uartBaudrate() {
+    }
+
+    static get uartData() {
+    }
+
+    static get i2cMode() {
+    }
+
+    static get i2cAddress() {
+    }
+
+    static get i2cData() {
+    }
+
+    static get i2cDataLength() {
+    }
+
+    static get spiMode() {
+    }
+
+    static get spiEndianness() {
+    }
+
+    static get spiSpeed() {
+    }
+
+    static get spiData() {
+    }
 }
 
 var key, value;

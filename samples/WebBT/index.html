@@ -1,22 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-<!--script src="../../js/konashi-bridge.js"></script-->
-<!--script src="../../js/konashi-bridge-webapi.js"></script-->
 <script src="../../js/konashi-web-bluetooth.js"></script>
 <script>
 window.addEventListener('load', () => {
-  document.getElementById('start').addEventListener('click', () => {
+  var $id = (id) => { return document.getElementById(id); };
+
+  $id('start').addEventListener('click', () => {
     Konashi.find(true).then((k) => {
-      k.pinMode(k.PIO2, k.OUTPUT).then(() => {
-        k.digitalWrite(k.PIO2, k.HIGH);
-      });
+      k.pinMode(k.PIO0, k.INPUT)
+        .then(() => { return k.pinMode(k.PIO1, k.OUTPUT) })
+        .then(() => { return k.pinMode(k.PIO2, k.OUTPUT) })
+        .then(() => { return k.pinMode(k.PIO3, k.OUTPUT) })
+        .then(() => { return k.pinMode(k.PIO4, k.OUTPUT) })
+        .then(() => {
+          var i = 0,
+              cancelRead = false,
+              timeline = [[k.PIO1, k.HIGH],
+                          [k.PIO1, k.LOW],
+                          [k.PIO2, k.HIGH],
+                          [k.PIO2, k.LOW],
+                          [k.PIO3, k.HIGH],
+                          [k.PIO3, k.LOW],
+                          [k.PIO4, k.HIGH],
+                          [k.PIO4, k.LOW]];
+          setInterval(() => {
+            cancelRead = true;
+            if (timeline.length <= i) {
+              i = 0;
+            }
+            var values = timeline[i];
+            k.digitalWrite(values[0], values[1]).then(() => {
+              cancelRead = false;
+            });
+
+            setTimeout(() => {
+              if (!cancelRead) {
+                k.digitalRead(k.PIO0).then((v) => {
+                  $id('pio0').innerHTML = v;
+                });
+              }
+            }, 50);
+
+            i++;
+          }, 200);
+        });
     });
   });
 });
+
 </script>
 </head>
 <body>
     <button id="start">Start</button>
+    <br />
+    PIO0: <span id="pio0"></span>
 </body>
 </html>
