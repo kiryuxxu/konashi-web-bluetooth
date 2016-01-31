@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <script src="../../js/konashi-web-bluetooth.js"></script>
 <script>
 window.addEventListener('load', () => {
@@ -52,8 +54,11 @@ window.addEventListener('load', () => {
 </script>
 </head>
 <body>
-    <button id="start">Start</button>
+    <div class="container">
+    <h1>konashi Web Bluetooth</h1>
+    <button class="btn btn-large btn-block" id="start">Find konashi</button>
     <br />
-    PIO0: <span id="pio0"></span>
+    <span class="badge">PIO0</span> <span id="pio0"></span>
+    </div>
 </body>
 </html>
